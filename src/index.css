@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff;
+  --foreground: #1a1a1a;
+  --primary: #ff6b6b;
+  --secondary: #f7f7f7;
+  --accent: #ffb3ba;
+  --border: #e5e5e5;
+}
+
+[data-theme='dark'] {
+  --background: #1a1a1a;
+  --foreground: #f7f7f7;
+  --primary: #ff6b6b;
+  --secondary: #2d2d2d;
+  --accent: #ffb3ba;
+  --border: #333;
+}
+
+[data-theme='red-pastel'] {
+  --background: #fff5f5;
+  --foreground: #4a1a1a;
+  --primary: #e57373;
+  --secondary: #ffebee;
+  --accent: #ffcdd2;
+  --border: #ffcccb;
+}
+
+[data-theme='blue-pastel'] {
+  --background: #f0f7ff;
+  --foreground: #1a2a4a;
+  --primary: #64b5f6;
+  --secondary: #e3f2fd;
+  --accent: #bbdefb;
+  --border: #b3d7ff;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
