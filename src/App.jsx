@@ -5,8 +5,10 @@ import Calendar from './pages/Calendar';
 import ListPage from './pages/ListPage';
 import Reminders from './pages/Reminders';
 import SettingsPage from './pages/Settings';
+import { useNotifications } from './hooks/useNotifications';
 
 function App() {
+  useNotifications();
   const [currentPage, setCurrentPage] = useState('home');
 
   const renderPage = () => {
