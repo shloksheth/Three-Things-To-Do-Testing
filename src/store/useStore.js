@@ -203,9 +203,17 @@ export const useStore = create()(
           const siblings = tasks.filter(t => t.parentId === parent.id);
           const allSiblingsDone = siblings.every(s => s.completed);
 
-          if (parent.completed !== allSiblingsDone) {
-             tasks = tasks.map(t => t.id === parent.id ? { ...t, completed: allSiblingsDone } : t);
-             return updateParents(tasks, parent.id);
+          if (allSiblingsDone && !parent.completed) {
+            // Requirement: Ask if user wants to mark parent as done
+            const confirmDone = confirm(`All subtasks for "${parent.title}" are done. Mark "${parent.title}" as completed?`);
+            if (confirmDone) {
+              tasks = tasks.map(t => t.id === parent.id ? { ...t, completed: true } : t);
+              return updateParents(tasks, parent.id);
+            }
+          } else if (!allSiblingsDone && parent.completed) {
+            // Uncheck parent if a subtask is unchecked
+            tasks = tasks.map(t => t.id === parent.id ? { ...t, completed: false } : t);
+            return updateParents(tasks, parent.id);
           }
           return tasks;
         };
