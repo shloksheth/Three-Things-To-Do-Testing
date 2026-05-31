@@ -1,13 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { User, Palette, Download, Upload, Trash2, Heart, QrCode, Smartphone, X } from 'lucide-react';
+import { User, Palette, Download, Upload, Trash2, Heart, QrCode, Smartphone, X, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
 import LZString from 'lz-string';
 
 const Settings = () => {
   const [showQR, setShowQR] = useState(false);
+  const [toast, setToast] = useState(null);
   const { user, setUser, clearData, importData, tasks, categories, events } = useStore();
+
+  const showFeedback = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const syncUrl = useMemo(() => {
     const data = { user, tasks, categories, events };
@@ -41,16 +47,29 @@ const Settings = () => {
       try {
         const data = JSON.parse(event.target.result);
         importData(data);
-        alert('Data imported successfully!');
+        showFeedback('Data imported successfully!');
       } catch (err) {
-        alert('Invalid backup file');
+        showFeedback('Error: Invalid backup file');
       }
     };
     reader.readAsText(file);
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-12 pb-20">
+    <div className="max-w-2xl mx-auto space-y-12 pb-20 relative">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[var(--primary)] text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] flex items-center gap-3 font-bold"
+          >
+            <CheckCircle size={20} />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <h1 className="text-3xl font-bold">Settings</h1>
 
       {/* Profile Section */}

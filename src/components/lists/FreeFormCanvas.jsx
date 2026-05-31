@@ -33,7 +33,7 @@ const FreeFormCanvas = ({ tasks }) => {
           <Draggable
             key={task.id}
             grid={snapToGrid ? [gridSize, gridSize] : [1, 1]}
-            defaultPosition={task.position || { x: Math.random() * 400, y: Math.random() * 300 }}
+            position={task.position || { x: 50, y: 50 }}
             onStop={(e, data) => updateTaskPosition(task.id, { x: data.x, y: data.y })}
             handle=".drag-handle"
           >

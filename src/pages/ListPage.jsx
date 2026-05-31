@@ -31,6 +31,17 @@ const ListPage = () => {
   const [importText, setImportText] = useState('');
   const [importFormat, setImportFormat] = useState('spaced');
 
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [isAddingToId, setIsAddingToId] = useState(null); // id of parent or 'root'
+  const [isAddingToCategory, setIsAddingToCategory] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showFeedback = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const topLevelTasks = useMemo(() => tasks.filter(t => !t.parentId), [tasks]);
   const unassignedTasks = useMemo(() => tasks.filter(t => !t.date && !t.completed), [tasks]);
 
@@ -42,10 +53,22 @@ const ListPage = () => {
   };
 
   const handleAddTask = (parentId = null, categoryId = null) => {
-    const title = prompt('Enter task title:');
-    if (title) {
-      addTask({ title, parentId, categoryId });
+    setIsAddingToId(parentId || 'root');
+    setIsAddingToCategory(categoryId);
+    setEditingTitle('');
+  };
+
+  const submitNewTask = () => {
+    if (editingTitle.trim()) {
+      addTask({
+        title: editingTitle,
+        parentId: isAddingToId === 'root' ? null : isAddingToId,
+        categoryId: isAddingToCategory
+      });
     }
+    setIsAddingToId(null);
+    setIsAddingToCategory(null);
+    setEditingTitle('');
   };
 
   const handleDeleteTask = (task) => {
@@ -183,23 +206,55 @@ const ListPage = () => {
               </button>
 
               <div className="flex-1 flex items-center gap-3">
-                 <span className={`font-medium ${task.completed ? 'line-through' : ''}`}>{task.title}</span>
-                 {task.date && (
-                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--primary)] text-white font-bold opacity-80">
-                     {format(parseISO(task.date), 'MMM d')}
+                 {editingTaskId === task.id ? (
+                   <input
+                    autoFocus
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onBlur={() => {
+                      updateTask(task.id, { title: editingTitle });
+                      setEditingTaskId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        updateTask(task.id, { title: editingTitle });
+                        setEditingTaskId(null);
+                      }
+                    }}
+                    className="flex-1 bg-[var(--secondary)] border-none rounded-lg px-2 py-1 outline-none font-medium"
+                   />
+                 ) : (
+                   <span
+                    onClick={() => {
+                      setEditingTaskId(task.id);
+                      setEditingTitle(task.title);
+                    }}
+                    className={`font-medium cursor-text ${task.completed ? 'line-through' : ''}`}
+                   >
+                     {task.title}
                    </span>
                  )}
+
+                 <div className="relative group/date">
+                   {task.date ? (
+                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--primary)] text-white font-bold opacity-80 cursor-pointer">
+                       {format(parseISO(task.date), 'MMM d')}
+                     </span>
+                   ) : (
+                     <CalendarIcon size={14} className="opacity-0 group-hover:opacity-100 cursor-pointer" />
+                   )}
+                   <input
+                    type="date"
+                    value={task.date || ''}
+                    onChange={(e) => updateTask(task.id, { date: e.target.value })}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                   />
+                 </div>
               </div>
 
               <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
                 <button onClick={() => handleAddTask(task.id)} className="p-1 hover:bg-[var(--border)] rounded">
                   <Plus size={16} />
-                </button>
-                <button onClick={() => {
-                  const date = prompt('Enter date (YYYY-MM-DD):', task.date || format(new Date(), 'yyyy-MM-dd'));
-                  if (date) updateTask(task.id, { date });
-                }} className="p-1 hover:bg-[var(--border)] rounded">
-                  <CalendarIcon size={16} />
                 </button>
                 <button onClick={() => handleDeleteTask(task)} className="p-1 hover:bg-red-100 text-red-500 rounded">
                   <Trash2 size={16} />
@@ -218,6 +273,19 @@ const ListPage = () => {
                     {children.map((child, idx) => (
                       <TaskItem key={child.id} task={child} index={idx} depth={depth + 1} />
                     ))}
+                    {isAddingToId === task.id && (
+                       <div className="ml-10 py-2">
+                        <input
+                          autoFocus
+                          placeholder="New subtask..."
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={submitNewTask}
+                          onKeyDown={(e) => e.key === 'Enter' && submitNewTask()}
+                          className="w-full bg-[var(--secondary)] border-none rounded-xl px-4 py-1.5 outline-none font-medium text-sm"
+                        />
+                      </div>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -246,9 +314,26 @@ const ListPage = () => {
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }} />
                       {cat.name}
                     </h3>
-                    <button onClick={() => handleAddTask(null, cat.id)} className="p-1 hover:bg-[var(--secondary)] rounded"><Plus size={18} /></button>
+                    <button onClick={() => {
+                      setIsAddingToId('kanban');
+                      setIsAddingToCategory(cat.id);
+                      setEditingTitle('');
+                    }} className="p-1 hover:bg-[var(--secondary)] rounded"><Plus size={18} /></button>
                   </div>
                   <div className="flex-1 bg-[var(--secondary)] rounded-3xl p-4 space-y-3 min-h-[200px]">
+                    {isAddingToId === 'kanban' && isAddingToCategory === cat.id && (
+                      <div className="bg-[var(--background)] p-3 rounded-2xl shadow-sm border border-[var(--primary)]">
+                        <input
+                          autoFocus
+                          placeholder="New task title..."
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={submitNewTask}
+                          onKeyDown={(e) => e.key === 'Enter' && submitNewTask()}
+                          className="w-full bg-transparent border-none outline-none font-medium"
+                        />
+                      </div>
+                    )}
                     {tasks.filter(t => t.categoryId === cat.id && !t.parentId).map((task, idx) => (
                       <Draggable key={task.id} draggableId={task.id} index={idx}>
                         {(provided) => (
@@ -279,7 +364,20 @@ const ListPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 h-full flex flex-col">
+    <div className="max-w-6xl mx-auto space-y-8 h-full flex flex-col relative">
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[var(--primary)] text-white px-6 py-3 rounded-2xl shadow-2xl z-[100] flex items-center gap-3 font-bold"
+          >
+            <CheckCircle2 size={20} />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -340,13 +438,27 @@ const ListPage = () => {
                   {...provided.droppableProps}
                   className="bg-[var(--background)] border border-[var(--border)] rounded-3xl p-6 shadow-sm min-h-[400px]"
                 >
-                  {topLevelTasks.length > 0 ? (
-                    <div className="space-y-2">
-                      {topLevelTasks.map((task, idx) => (
-                        <TaskItem key={task.id} task={task} index={idx} />
-                      ))}
-                    </div>
-                  ) : (
+                  <div className="space-y-2">
+                    {topLevelTasks.map((task, idx) => (
+                      <TaskItem key={task.id} task={task} index={idx} />
+                    ))}
+
+                    {isAddingToId === 'root' && (
+                      <div className="ml-10 py-2 px-3">
+                        <input
+                          autoFocus
+                          placeholder="New task..."
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={submitNewTask}
+                          onKeyDown={(e) => e.key === 'Enter' && submitNewTask()}
+                          className="w-full bg-[var(--secondary)] border-none rounded-xl px-4 py-2 outline-none font-medium"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {topLevelTasks.length === 0 && isAddingToId !== 'root' && (
                     <div className="flex flex-col items-center justify-center h-full py-20 opacity-30 gap-4">
                        <ListIcon size={64} />
                        <p className="text-xl font-medium">Your list is empty</p>
@@ -363,13 +475,22 @@ const ListPage = () => {
           {viewMode === 'free' && <FreeFormCanvas tasks={tasks} />}
 
           {viewMode === 'side' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar">
               {topLevelTasks.map((task, idx) => (
-                <div key={task.id} className="bg-[var(--background)] border border-[var(--border)] rounded-3xl p-6 shadow-sm">
-                  <h3 className="font-bold text-lg mb-4">{task.title}</h3>
-                  <TaskItem task={task} index={idx} />
+                <div key={task.id} className="min-w-[320px] max-w-[400px] bg-[var(--background)] border border-[var(--border)] rounded-3xl p-6 shadow-sm flex flex-col gap-4">
+                  <h3 className="font-bold text-lg">{task.title}</h3>
+                  <div className="flex-1 overflow-y-auto">
+                    <TaskItem task={task} index={idx} />
+                  </div>
                 </div>
               ))}
+              <button
+                onClick={() => handleAddTask()}
+                className="min-w-[320px] border-2 border-dashed border-[var(--border)] rounded-3xl flex flex-col items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity"
+              >
+                <Plus size={48} />
+                <span className="font-bold">Add Main Task</span>
+              </button>
             </div>
           )}
         </div>
@@ -412,7 +533,7 @@ const ListPage = () => {
                           else if (importFormat === 'spaced') promptStr = "Format my list with leading spaces to represent hierarchy. Example:\nTask\n  Subtask";
                           else promptStr = "Format my list with bullet points to represent hierarchy.";
                           navigator.clipboard.writeText(promptStr);
-                          alert('AI Prompt copied to clipboard!');
+                          showFeedback('AI Prompt copied to clipboard!');
                         }}
                         className="text-xs font-bold text-[var(--primary)] flex items-center gap-1 hover:underline"
                        >
